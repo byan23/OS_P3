@@ -1,0 +1,14 @@
+vm.c
+allocuvm
+user makefile:
+  --entry=main
+  --section-start=.text=0x0
+
+Part B:
+In exec.c:
+  sz is now only tracking size of code + heap
+  a new page is allocated at the end of the addr space for the 1st stack.
+  modify copyuvm such that fork works:
+  (some ideas)
+    Apparently there are more things to worry abt the user process
+    allocate a page at the end of the new copied addr space
