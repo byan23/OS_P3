@@ -326,7 +326,8 @@ copyuvm(pde_t *pgdir, uint sz)
   //cprintf("before coping stack from pid %d.\n", proc->pid);
   // TODO(byan23): Copy more stack as it grows.
   // Copy stack.
-  i = USERTOP - PGSIZE;
+  i = USERTOP - proc->ssz;
+  //i = USERTOP - PGSIZE;
   if((pte = walkpgdir(pgdir, (void*)i, 0)) == 0)
     panic("copyuvm: pte should exist");
   if(!(*pte & PTE_P))

@@ -7,7 +7,6 @@
 #include "syscall.h"
 #include "sysfunc.h"
 
-// TODO(byan23): Modify checks. For now, assume only one page stack.
 // TODO(byan23): Add 1st page check.
 // User code makes a system call with INT T_SYSCALL.
 // System call number in %eax.
@@ -21,8 +20,10 @@ fetchint(struct proc *p, uint addr, int *ip)
 {
   //cprintf("fetching int...\n");
   //if(addr >= p->sz || addr+4 > p->sz)
-  if (addr >= USERTOP || addr + 4 > USERTOP ||
-      (addr + 4 > p->sz && addr < USERTOP - PGSIZE))
+  if ((p->pid != 1 && addr < PGSIZE)			 ||
+      (addr >= p->sz && addr < USERTOP - p->ssz)	 ||
+      (addr + 3 >= p->sz && addr + 3 < USERTOP - p->ssz) ||
+      addr >= USERTOP || addr + 4 > USERTOP)
     return -1;
   *ip = *(int*)(addr);
   return 0;
@@ -37,7 +38,9 @@ fetchstr(struct proc *p, uint addr, char **pp)
   //cprintf("fetching str...\n");
   char *s, *ep;
   //if(addr >= p->sz)
-  if(addr >= USERTOP || (addr >= p->sz && addr < USERTOP - PGSIZE))
+  if((p->pid != 1 && addr < PGSIZE) ||
+      addr >= USERTOP		    || 
+      (addr >= p->sz && addr < USERTOP - p->ssz))
     return -1;
   *pp = (char*)addr;
   //ep = (char*)p->sz;
@@ -69,8 +72,9 @@ argptr(int n, char **pp, int size)
   if(argint(n, &i) < 0)
     return -1;
   //if((uint)i >= proc->sz || (uint)i+size > proc->sz)
-  if ((uint)i >= USERTOP || (uint)i+size > USERTOP ||
-      ((uint)i + size > proc->sz && (uint)i < USERTOP - PGSIZE))
+  if ((proc->pid != 1 && (uint)i < PGSIZE)	   ||
+      (uint)i >= USERTOP || (uint)i+size > USERTOP ||
+      ((uint)i + size > proc->sz && (uint)i < USERTOP - proc->ssz))
     return -1;
   *pp = (char*)i;
   return 0;

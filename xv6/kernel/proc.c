@@ -85,6 +85,7 @@ userinit(void)
     panic("userinit: out of memory?");
   inituvm(p->pgdir, _binary_initcode_start, (int)_binary_initcode_size);
   p->sz = PGSIZE;
+  p->ssz = 0;
   memset(p->tf, 0, sizeof(*p->tf));
   p->tf->cs = (SEG_UCODE << 3) | DPL_USER;
   p->tf->ds = (SEG_UDATA << 3) | DPL_USER;
@@ -103,6 +104,7 @@ userinit(void)
 
 // Grow current process's memory by n bytes.
 // Return 0 on success, -1 on failure.
+// TODO(byan23): Adds check for guard page.
 int
 growproc(int n)
 {
@@ -133,7 +135,6 @@ fork(void)
   // Allocate process.
   if((np = allocproc()) == 0)
     return -1;
-
   // Copy process state from p.
   if((np->pgdir = copyuvm(proc->pgdir, proc->sz)) == 0){
     kfree(np->kstack);
@@ -142,6 +143,7 @@ fork(void)
     return -1;
   }
   np->sz = proc->sz;
+  np->ssz = proc->ssz;
   np->parent = proc;
   *np->tf = *proc->tf;
 
