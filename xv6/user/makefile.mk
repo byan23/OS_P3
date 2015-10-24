@@ -9,7 +9,15 @@ USER_PROGS := \
 	kill\
 	ln\
 	ls\
+	null\
+	null-syscall\
+	badaddress-syscall\
+	small-stack\
+	stack-growth\
 	fault\
+	malloc\
+	overcommit-stack\
+	overcommit-heap\
 	mkdir\
 	rm\
 	sh\

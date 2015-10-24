@@ -39,9 +39,10 @@ trap(struct trapframe *tf)
       exit();
     proc->tf = tf;
     syscall();
+    if (proc->tf->trapno != T_PGFLT) {
     if(proc->killed)
       exit();
-    return;
+    return;}
   }
 
   switch(tf->trapno){
@@ -78,16 +79,15 @@ trap(struct trapframe *tf)
   // TODO(byan23): Add a case for page fault.
   case T_PGFLT:
     // check range of rcr2() not in guard page
-    if ((PGROUNDUP(proc->sz) + PGSIZE < USERTOP - proc->ssz) && 
+    // only grow one page at a time
+    //cprintf("check: \nstack: %d\nproc->sz: %d\nrcr: %d\n", USERTOP-proc->ssz, proc->sz, rcr2());
+    if ((PGROUNDUP(proc->sz) + PGSIZE < USERTOP - proc->ssz) &&
+	(rcr2() >= USERTOP - proc->ssz - PGSIZE) &&
 	(rcr2() >= proc->sz + PGSIZE)) {
-      cprintf("pid %d %s: trap %d err %d on cpu %d "
-	      "eip 0x%x addr 0x%x--kill proc\n",
-	      proc->pid, proc->name, tf->trapno, tf->err, cpu->id, tf->eip, 
-	      rcr2());
-      uint pgpos =
-	(rcr2() % PGSIZE == 0) ? rcr2() : (PGROUNDUP(rcr2()) - PGSIZE);
-      //uint pgnum = proc->ssz - pgpos;
-      if (allocuvm(proc->pgdir, pgpos, proc->ssz) == 0) {
+      //uint pgpos =
+	//(rcr2() % PGSIZE == 0) ? rcr2() : (PGROUNDUP(rcr2()) - PGSIZE);
+      uint pgpos = proc->ssz + PGSIZE;
+      if (allocuvm(proc->pgdir, USERTOP - pgpos, USERTOP - proc->ssz) == 0) {
 	cprintf("allocuvm failed cr2=0x%x\n", rcr2());
 	proc->killed = 1;
 	break;

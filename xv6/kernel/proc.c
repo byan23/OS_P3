@@ -5,6 +5,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "traps.h"
 
 struct {
   struct spinlock lock;
@@ -109,8 +110,11 @@ int
 growproc(int n)
 {
   uint sz;
-  
   sz = proc->sz;
+  if (sz + n >= USERTOP - proc->ssz - PGSIZE) {
+    proc->tf->trapno = T_PGFLT;
+    return -1;
+  }
   if(n > 0){
     if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
       return -1;
@@ -158,6 +162,7 @@ fork(void)
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
+  //cprintf("fork success.\n");
   return pid;
 }
 

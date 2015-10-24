@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "syscall.h"
 #include "sysfunc.h"
+#include "traps.h"
 
 // TODO(byan23): Add 1st page check.
 // User code makes a system call with INT T_SYSCALL.
@@ -18,13 +19,15 @@
 int
 fetchint(struct proc *p, uint addr, int *ip)
 {
-  //cprintf("fetching int...\n");
+  //cprintf("fetching int from... %x\n", addr);
   //if(addr >= p->sz || addr+4 > p->sz)
   if ((p->pid != 1 && addr < PGSIZE)			 ||
       (addr >= p->sz && addr < USERTOP - p->ssz)	 ||
       (addr + 3 >= p->sz && addr + 3 < USERTOP - p->ssz) ||
-      addr >= USERTOP || addr + 4 > USERTOP)
+      addr >= USERTOP || addr + 4 > USERTOP) {
+    p->tf->trapno = T_PGFLT;
     return -1;
+  }
   *ip = *(int*)(addr);
   return 0;
 }
@@ -35,16 +38,19 @@ fetchint(struct proc *p, uint addr, int *ip)
 int
 fetchstr(struct proc *p, uint addr, char **pp)
 {
-  //cprintf("fetching str...\n");
+  //cprintf("fetching str from %x\n", addr);
   char *s, *ep;
   //if(addr >= p->sz)
   if((p->pid != 1 && addr < PGSIZE) ||
       addr >= USERTOP		    || 
-      (addr >= p->sz && addr < USERTOP - p->ssz))
+      (addr >= p->sz && addr < USERTOP - p->ssz)) {
+    p->tf->trapno = T_PGFLT;
     return -1;
+  }
   *pp = (char*)addr;
   //ep = (char*)p->sz;
-  // TODO(byan23): 2 segs.
+  // TODO(byan23): 2 segs: either copy from heap or stack.
+  // Seems okay for now...
   ep = (char*)USERTOP;
   //cprintf("[in fetchstr] ok till here...\n");
   
@@ -68,14 +74,16 @@ int
 argptr(int n, char **pp, int size)
 {
   int i;
-  
   if(argint(n, &i) < 0)
     return -1;
   //if((uint)i >= proc->sz || (uint)i+size > proc->sz)
+  //cprintf("argptr: %x\n", (uint)i);
   if ((proc->pid != 1 && (uint)i < PGSIZE)	   ||
       (uint)i >= USERTOP || (uint)i+size > USERTOP ||
-      ((uint)i + size > proc->sz && (uint)i < USERTOP - proc->ssz))
+      ((uint)i + size > proc->sz && (uint)i < USERTOP - proc->ssz)) {
+    proc->tf->trapno = T_PGFLT;
     return -1;
+  }
   *pp = (char*)i;
   return 0;
 }
